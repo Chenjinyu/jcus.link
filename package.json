@@ -1,5 +1,5 @@
 {
-  "name": "ai-sdk-rag-starter",
+  "name": "jsus.link",
   "version": "0.1.0",
   "private": true,
   "scripts": {
@@ -25,6 +25,7 @@
     "@radix-ui/react-label": "^2.1.0",
     "@radix-ui/react-slot": "^1.1.0",
     "@t3-oss/env-nextjs": "^0.10.1",
+    "@uiw/react-md-editor": "^4.0.8",
     "ai": "^5.0.93",
     "ai-sdk-ollama": "^1.0.1",
     "class-variance-authority": "^0.7.0",
