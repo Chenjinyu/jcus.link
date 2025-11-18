@@ -154,6 +154,7 @@ venv.bak/
 # mkdocs documentation
 /site
 /tmp
+/node_modules
 
 # mypy
 .mypy_cache/
@@ -206,3 +207,5 @@ cython_debug/
 marimo/_static/
 marimo/_lsp/
 __marimo__/
+node_modules/
+pnpm-lock.yaml
