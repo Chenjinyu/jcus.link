@@ -1,3 +1,5 @@
+// store the embeded context for resources. 
+
 import { nanoid } from '@/app/utils/nanoid';
 import { index, pgTable, text, varchar, vector } from 'drizzle-orm/pg-core';
 import { resources } from './resources';

@@ -1,4 +1,4 @@
-import { createResource } from '@/app/lib/actions/resources';
+import { createResource } from '@/db/actions/resources';
 import { deepinfra } from '@ai-sdk/deepinfra';
 import {
   convertToModelMessages,
@@ -8,53 +8,14 @@ import {
   stepCountIs,
 } from 'ai';
 import { z } from 'zod';
-import { findRelevantContent } from '@/app/lib/ai/embedding';
+import { findRelevantContent } from '@/app/lib/embedding';
 import { ollamaModel } from '@/app/lib/models/ollama';
 import { selectModel } from '@/app/utils/utils';
 import { PROMPT_NEW, PROMPT_DEFAULT } from '@/app/configs/config';
 // Allow streaming responses up to 30 seconds
 export const maxDuration = 30;
 
-/**
-the sequence flow with tools is:
-messages → OpenAI model → model decides → returns tool call → SDK runs tool.execute()
------  
-User Messages
-     ↓
-convertToModelMessages(messages)
-     ↓
-streamText({
-  model,
-  messages,
-  tools: { ... }
-})
-     ↓
-MODEL THINKS
-(“Should I call a tool?”)
-     ↓
-If yes → Model returns:
-{
-  "toolCall": {
-      "name": "getInformation",
-      "arguments": { "question": "..." }
-  }
-}
-     ↓
-Vercel AI SDK sees this → automatically calls:
-tools.getInformation.execute(args)
-     ↓
-Your execute() function returns result
-     ↓
-Result is inserted back into AI conversation as:
-{
-  "role": "tool",
-  "name": "getInformation",
-  "content": ".... result ...."
-}
-     ↓
-Model receives tool result and continues generating the final answer
 
- */
 export async function POST(req: Request) {
   const { messages, metadata }: { messages: UIMessage[] , metadata?: any} = await req.json();
   console.log('Incoming messages:', JSON.stringify(messages, null, 2));  

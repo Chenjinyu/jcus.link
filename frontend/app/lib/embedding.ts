@@ -1,9 +1,9 @@
 import { embed, embedMany } from 'ai';
 import { groq } from '@ai-sdk/groq';
 // import { openai } from '@ai-sdk/openai';
-import { db } from '../db';
+import { db } from '../../db';
 import { cosineDistance, desc, gt, sql } from 'drizzle-orm';
-import { embeddings } from '../db/schema/embeddings';
+import { embeddings } from '../../db/schema/embeddings';
 
 //openai.embedding('text-embedding-ada-002');
 const embeddingModel = groq.embedding("text-embedding-3-small");
