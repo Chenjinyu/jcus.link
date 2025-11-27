@@ -6,7 +6,8 @@ A context typically provides global/shared data to multiple components, such as:
 - language settings
 - app-wide config
 - global state store (if not using Redux/Zustand/Jotai)
- */
+ 
+*/
 
 "use client";
 
@@ -27,16 +28,16 @@ import {  useToast } from "../hooks/useToast";
 import { v4 as uuidv4 } from "uuid";
 import { ModelOptions } from "../types";
 import { useQueryState } from "nuqs";
-import { useThreads } from "../hooks/useThreads";
+import { pageMessageData } from "../hooks/pageMessageData";
 import { useRuns } from "../hooks/useRuns";
 import { useUser } from "../hooks/useUser";
 import { messageContentToText } from "../utils/convert_messages";
 
-export interface ChatWindowInput { 
+export interface ChatPageInput { 
     messages?: Record<string, any>[];
 }
 
-interface ChatWindowData { 
+interface ChatPageData { 
     runId: string | null;
     isStreaming: boolean;
     // messages: Message[];
@@ -45,22 +46,22 @@ interface ChatWindowData {
     setMessages: Dispatch<SetStateAction<Record<string, any>[]>>;
     streamMessage: (
         currentThreadId: string | null | undefined,
-        params: ChatWindowInput,
+        params: ChatPageInput,
     ) => Promise<void>;
     // switchSelectedThread: (thread: Thread) => void;
 }
 
 type UserDataContextType = ReturnType<typeof useUser>;
-type ThreadsDataContextType = ReturnType<typeof useThreads>;
+type PageDataContextType = ReturnType<typeof usePage>;
 
-type ChatWindowType = {
+type ChatPageType = {
     userData: UserDataContextType;
-    threadsData: ThreadsDataContextType;
+    pageData: PageDataContextType;
 }
-const ChatWindowContext = createContext<ChatWindowType | undefined>(undefined);
+const ChatPageContext = createContext<ChatPageType | undefined>(undefined);
 
-export function useChatWindowContext() { 
-    const context = useContext(ChatWindowContext);
+export function useChatPageContext() { 
+    const context = useContext(ChatPageContext);
     if (context === undefined) {
         throw new Error(
             "useChatWindowContext must be used within a ChatWindowProvider",
