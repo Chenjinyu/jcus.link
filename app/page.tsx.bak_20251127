@@ -1,0 +1,12 @@
+'use client';
+
+import { ChatInput } from '@/app/customs/chat-interface/prompt-input';
+
+export default function Page() {
+  
+  return (
+    <main className="w-full h-full">
+      <ChatInput></ChatInput>
+    </main>
+  );
+}
