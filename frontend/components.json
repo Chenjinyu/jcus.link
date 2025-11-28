@@ -11,8 +11,11 @@
   },
   "iconLibrary": "lucide",
   "aliases": {
-    "components": "@/components",
-    "utils": "@/app/lib/utils"
+    "components": "@/app/components",
+    "utils": "@/app/utils",
+    "ai-elements": "@app/components/ai-elements",
+    "ui": "@app/components/ui",
+    "hooks": "@/app/hooks"
   },
   "registries": {
     "@ai-elements": "https://registry.ai-sdk.dev/{name}.json"
