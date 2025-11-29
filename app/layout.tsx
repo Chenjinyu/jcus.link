@@ -7,7 +7,7 @@ const inter = Inter({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
   title: "JC US Link",
-  description: "Ask any questions you have about JC(Jinyu Chen)",
+  description: "JC(Jinyu Chen) - Personal website with articles and chatbot",
 };
 
 export default function RootLayout({
@@ -16,8 +16,8 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" className="h-full">
-      <body className={`${inter.className} h-full`}>
+    <html lang="en">
+      <body className={`${inter.className} flex flex-col h-screen overflow-hidden`}>
         <div
           className="flex flex-col h-full w-full"
           style={{ background: "rgb(38, 38, 41)" }}
