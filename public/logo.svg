@@ -1,0 +1,10 @@
+<!-- 48x48 mark-only (for favicon/svg symbol) -->
+<svg width="48" height="48" viewBox="0 0 240 240" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="JC monogram">
+  <rect width="240" height="240" rx="24" fill="#121417"/>
+  <g transform="translate(26,26)">
+    <path d="M0,0 H36 V120 c0,34 22,52 56,52 c22,0 38,-6 50,-18 l-20,-22 c-9,8 -18,12 -31,12 c-18,0 -29,-11 -29,-28 V0 Z"
+          fill="#2F8CFF"/>
+    <path d="M180,44 a76,76 0 1 0 0,152 a76,76 0 0 0 0,-20 a56,56 0 1 1 0,-112 a76,76 0 0 0 0,-20 Z"
+          fill="#7AA6FF"/>
+  </g>
+</svg>

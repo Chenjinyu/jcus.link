@@ -3,6 +3,7 @@
 
 import React from 'react';
 import Link from 'next/link';
+import Image from 'next/image';
 import { usePathname } from 'next/navigation';
 import ThemeColorPicker from '@/app/customs/theme/ThemeColorPicker';
 import LoginDropdown from './LoginDropdown';
@@ -33,9 +34,25 @@ export default function Navbar() {
         {/* Logo */}
         <div className="mr-8 flex items-center">
           <Link href="/" className="flex items-center space-x-2">
-            <span className="text-xl font-bold" style={{ color: themeStyle.navbarText }}>
-              JCUS.LINK
-            </span>
+            {/* Option 1: Using PNG */}
+            {/* <Image
+              src="/logo.png"
+              alt="JCUS.link Logo"
+              width={40}
+              height={40}
+              priority
+              className="h-8 w-auto"
+            /> */}
+            
+            {/* Option 2: Using SVG - uncomment this and comment out PNG above */}
+            <Image
+              src="/logo_black.png"
+              alt="JCUS.link Logo"
+              width={120}
+              height={40}
+              priority
+              className="h-8 w-auto"
+            />
           </Link>
         </div>
 
