@@ -6,7 +6,7 @@ import {
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "../components/ui/select";
+} from "@/components/ui/select";
 
 const modelOptionsAndLabels: Partial<Record<ModelOptions, string>> = {
   "anthropic/claude-3-5-haiku-20241022": "Claude 3.5 Haiku",
@@ -41,3 +41,7 @@ export function SelectModelComponent() {
 }
 
 export const SelectModel = React.memo(SelectModelComponent);
+function useGraphContext(): { graphData: { selectedModel: any; setSelectedModel: any; }; } {
+  throw new Error("Function not implemented.");
+}
+
