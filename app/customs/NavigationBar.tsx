@@ -90,7 +90,11 @@ export default function Navbar() {
           />
           
           {/* Login Dropdown */}
-          <LoginDropdown />
+            <LoginDropdown 
+              navbarBg={themeStyle.navbarBg}
+              navbarText={themeStyle.navbarText}
+              isDarkTheme={theme === 'darkBlue' || theme === 'lightBlack'}
+            />
         </div>
       </nav>
     </header>

@@ -4,9 +4,16 @@
 import React, { useState } from 'react';
 import { User } from 'lucide-react';
 
-export default function LoginDropdown() {
+interface LoginDropdownProps {
+  navbarBg?: string;
+  navbarText?: string;
+  isDarkTheme?: boolean;
+}
+
+export default function LoginDropdown({ navbarBg, navbarText, isDarkTheme = false }: LoginDropdownProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const [hoveredButton, setHoveredButton] = useState<string | null>(null);
 
   const handleGoogleLogin = () => {
     console.log('Google login clicked');
@@ -31,11 +38,38 @@ export default function LoginDropdown() {
     setIsOpen(false);
   };
 
+  const getHoverStyle = (buttonType: string) => {
+    if (hoveredButton !== buttonType) return {};
+    
+    // Light themes (white, orange) - blue hover
+    if (!isDarkTheme) {
+      return {
+        backgroundColor: '#146585ff',
+        color: '#ffffff',
+      };
+    }
+    // Dark themes (dark blue, light black) - text becomes black
+    return {
+      backgroundColor: '#146585ff',
+      color: '#ffffff',
+    };
+  };
+
   return (
     <div className="relative">
       <button
         onClick={() => setIsOpen(!isOpen)}
-        className="flex items-center gap-2 px-3 py-2 rounded-md hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
+        onMouseEnter={() => setHoveredButton('login-btn')}
+        onMouseLeave={() => setHoveredButton(null)}
+        className="flex items-center gap-2 px-3 py-2 rounded-md transition-colors"
+        style={
+          hoveredButton === 'login-btn'
+            ? getHoverStyle('login-btn')
+            : {
+                backgroundColor: 'transparent',
+                color: navbarText,
+              }
+        }
         aria-label="Login options"
       >
         <User className="w-5 h-5" />
@@ -55,13 +89,25 @@ export default function LoginDropdown() {
           />
 
           {/* Dropdown */}
-          <div className="absolute right-0 mt-2 w-80 bg-white rounded-2xl shadow-2xl border border-gray-200 z-50">
+          <div 
+            className="absolute right-0 mt-2 w-80 rounded-2xl shadow-2xl border z-50"
+            style={{
+              backgroundColor: navbarBg || '#ffffff',
+              borderColor: isDarkTheme ? 'rgba(255, 255, 255, 0.1)' : '#e5e7eb',
+            }}
+          >
             <div className="p-6">
               {/* Title */}
-              <h2 className="text-2xl font-bold mb-2 text-gray-900">
+              <h2 
+                className="text-2xl font-bold mb-2"
+                style={{ color: navbarText }}
+              >
                 Welcome Back
               </h2>
-              <p className="text-sm text-gray-500 mb-6">
+              <p 
+                className="text-sm mb-6"
+                style={{ color: navbarText, opacity: 0.7 }}
+              >
                 Sign in to save your chat history.
               </p>
 
@@ -70,7 +116,12 @@ export default function LoginDropdown() {
                 {/* Google */}
                 <button
                   onClick={handleGoogleLogin}
-                  className="w-full flex items-center justify-center gap-3 px-4 py-3 rounded-lg border border-gray-300 hover:bg-gray-50 transition-colors bg-white text-gray-700 font-medium"
+                  className="w-full flex items-center justify-center gap-3 px-4 py-3 rounded-lg border transition-colors font-medium"
+                  style={{
+                    borderColor: isDarkTheme ? 'rgba(255, 255, 255, 0.2)' : '#d1d5db',
+                    backgroundColor: isDarkTheme ? 'rgba(255, 255, 255, 0.05)' : '#ffffff',
+                    color: navbarText,
+                  }}
                 >
                   <svg className="w-5 h-5" viewBox="0 0 24 24">
                     <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
@@ -107,14 +158,24 @@ export default function LoginDropdown() {
               {/* Divider */}
               <div className="relative my-6">
                 <div className="absolute inset-0 flex items-center">
-                  <div className="w-full border-t border-gray-300"></div>
+                  <div 
+                    className="w-full border-t"
+                    style={{ borderColor: isDarkTheme ? 'rgba(255, 255, 255, 0.1)' : '#d1d5db' }}
+                  ></div>
                 </div>
               </div>
 
               {/* Continue as Guest */}
               <button
                 onClick={handleGuestContinue}
-                className="w-full text-center text-sm text-gray-600 hover:text-gray-900 transition-colors font-medium"
+                className="w-full text-center text-sm transition-colors font-medium"
+                style={{ color: navbarText, opacity: 0.7 }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.opacity = '1';
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.opacity = '0.7';
+                }}
               >
                 Continue as Guest
               </button>
