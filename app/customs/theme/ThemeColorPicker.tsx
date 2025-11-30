@@ -9,17 +9,18 @@ export default function ThemeColorPicker() {
   const { theme, setTheme } = useTheme();
 
   const themeColors = {
-    [Theme.LIGHT]: '#ffffff',
-    [Theme.DARK_BLUE]: 'rgb(17, 17, 17)',
-    [Theme.LIGHT_BLACK]: 'rgb(28, 29, 28)',
+    [Theme.LIGHT_BLACK]: 'rgba(2, 2, 2, 1)',
+    [Theme.DARK_BLUE]: 'rgba(1, 29, 43, 1)',
     [Theme.LIGHT_ORANGE]: 'rgb(255, 237, 213)',
+    [Theme.LIGHT]: '#ffffff',
   };
 
   const themeLabels = {
-    [Theme.LIGHT]: 'Light',
-    [Theme.DARK_BLUE]: 'Dark Blue',
     [Theme.LIGHT_BLACK]: 'Light Black',
+    [Theme.DARK_BLUE]: 'Dark Blue',
     [Theme.LIGHT_ORANGE]: 'Light Orange',
+    [Theme.LIGHT]: 'Light',
+
   };
 
   return (

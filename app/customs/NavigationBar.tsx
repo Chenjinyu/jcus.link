@@ -47,7 +47,7 @@ export default function Navbar() {
             {/* Option 2: Using SVG - uncomment this and comment out PNG above */}
             <Image
               src="/logo_black.png"
-              alt="JCUS.link Logo"
+              alt="JCUS.LINK Logo"
               width={120}
               height={40}
               priority

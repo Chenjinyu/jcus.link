@@ -11,24 +11,17 @@ export enum Theme {
 }
 
 export const THEME_STYLES = {
-  [Theme.LIGHT]: {
-    backgroundColor: '#ffffff',
-    color: '#111111',
-    navbarBg: '#ffffff',
-    navbarText: '#111111',
-    navbarBorder: '#e5e7eb',
-  },
-  [Theme.DARK_BLUE]: {
-    backgroundColor: 'rgb(17, 17, 17)',
+  [Theme.LIGHT_BLACK]: {
+    backgroundColor: 'rgba(2, 2, 2, 1)',
     color: '#ffffff',
-    navbarBg: 'rgb(17, 17, 17)',
+    navbarBg: 'rgba(2, 2, 2, 1)',
     navbarText: '#ffffff',
     navbarBorder: 'rgba(255, 255, 255, 0.1)',
   },
-  [Theme.LIGHT_BLACK]: {
-    backgroundColor: 'rgb(28, 29, 28)',
+  [Theme.DARK_BLUE]: {
+    backgroundColor: 'rgba(1, 29, 43, 1)',
     color: '#ffffff',
-    navbarBg: 'rgb(28, 29, 28)',
+    navbarBg: 'rgba(1, 29, 43, 1)',
     navbarText: '#ffffff',
     navbarBorder: 'rgba(255, 255, 255, 0.1)',
   },
@@ -39,6 +32,13 @@ export const THEME_STYLES = {
     navbarText: '#292524',
     navbarBorder: '#fbbf24',
   },
+  [Theme.LIGHT]: {
+    backgroundColor: '#ffffff',
+    color: '#111111',
+    navbarBg: '#ffffff',
+    navbarText: '#111111',
+    navbarBorder: '#e5e7eb',
+  }
 };
 
 interface ThemeContextType {
