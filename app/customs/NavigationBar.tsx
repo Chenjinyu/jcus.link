@@ -5,8 +5,8 @@ import React, { useState } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { usePathname } from 'next/navigation';
-import ThemeColorPicker from '@/app/components/ThemeColorPicker';
-import LoginDropdown from '@/app/components/LoginDropdown';
+import ThemeColorPicker from '@/app/customs/theme/ThemeColorPicker';
+import LoginDropdown from '@/app/customs/LoginDropdown';
 import { useTheme, THEME_STYLES, Theme } from '@/app/context/ThemeContext';
 import { Menu, X } from 'lucide-react';
 
