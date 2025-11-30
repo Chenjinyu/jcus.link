@@ -30,7 +30,7 @@ import { ModelOptions } from "@/app/types";
 import { useQueryState } from "nuqs";
 // import { pageMessageData } from "@/app/hooks/pageMessageData";
 // import { useRuns } from "@/app/hooks/useRuns";
-import { useUser } from "@/app/hooks/useUser";
+// import { useUser } from "@/app/hooks/useUser";
 // import { messageContentToText } from "@/app/utils/convert_messages";
 
 export interface ChatPageInput { 
@@ -51,12 +51,12 @@ interface ChatPageData {
     // switchSelectedThread: (thread: Thread) => void;
 }
 
-type UserDataContextType = ReturnType<typeof useUser>;
-type PageDataContextType = ReturnType<typeof usePage>;
+// type UserDataContextType = ReturnType<typeof useUser>;
+// type PageDataContextType = ReturnType<typeof usePage>;
 
 type ChatPageType = {
-    userData: UserDataContextType;
-    pageData: PageDataContextType;
+    // userData: UserDataContextType;
+    // pageData: PageDataContextType;
 }
 const ChatPageContext = createContext<ChatPageType | undefined>(undefined);
 
