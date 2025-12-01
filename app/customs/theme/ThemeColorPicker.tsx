@@ -8,14 +8,14 @@ export default function ThemeColorPicker() {
   const { theme, setTheme } = useTheme();
 
   const themeColors = {
-    [Theme.LIGHT_BLACK]: 'rgba(2, 2, 2, 1)',
+    [Theme.BLACK]: 'rgba(2, 2, 2, 1)',
     [Theme.DARK_BLUE]: 'rgba(1, 29, 43, 1)',
     [Theme.LIGHT_ORANGE]: 'rgb(255, 237, 213)',
     [Theme.LIGHT]: '#ffffff',
   };
 
   const themeLabels = {
-    [Theme.LIGHT_BLACK]: 'Light Black',
+    [Theme.BLACK]: 'Black',
     [Theme.DARK_BLUE]: 'Dark Blue',
     [Theme.LIGHT_ORANGE]: 'Light Orange',
     [Theme.LIGHT]: 'Light',
