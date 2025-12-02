@@ -3,13 +3,28 @@ export type Source = {
   title: string;
 };
 
+export enum AuthProvider {
+  GOOGLE = 'Google',
+  FACEBOOK = 'Facebook',
+  APPLE = 'Apple',
+}
+
+// create User interface object
+export interface User {
+  id: string;
+  name: string;
+  email: string;
+  avatar?: string;
+  provider: AuthProvider;
+}
+
 export type Message = {
   id: string;
-  createdAt?: Date;
+  name?: string;
   content: string;
   type: "system" | "human" | "ai" | "function";
+  createdAt?: Date;
   sources?: Source[];
-  name?: string;
   function_call?: { name: string };
 };
 
@@ -26,27 +41,6 @@ export type ModelOptions =
   | "anthropic/claude-3-5-haiku-20241022"
   | "google_genai/gemini-2.0-flash";
 
-
-export enum Theme {
-  BLACK = 'BLACK',
-  DARK_BLUE = 'DARK_BLUE',
-  LIGHT_ORANGE = 'LIGHT_ORANGE',
-  WHITE = 'WHITE',
-}
-
-export enum AuthProvider {
-  GOOGLE = 'Google',
-  FACEBOOK = 'Facebook',
-  APPLE = 'Apple',
-}
-
-export interface User {
-  id: string;
-  name: string;
-  email: string;
-  avatar: string;
-  provider: AuthProvider;
-}
 
 export interface KnowledgeChunk {
   id: string;

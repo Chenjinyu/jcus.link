@@ -3,15 +3,17 @@
 
 import React, { createContext, useContext, useState, useEffect } from 'react';
 
+// the type of Theme and constant of THEME_STYLES keep in the ThemeContext,
+// because they won't be used for other component except ThemeColorPicker.
 export enum Theme {
   LIGHT = 'light',
   DARK_BLUE = 'darkBlue',
-  LIGHT_BLACK = 'lightBlack',
+  BLACK = 'Black',
   LIGHT_ORANGE = 'lightOrange',
 }
 
 export const THEME_STYLES = {
-  [Theme.LIGHT_BLACK]: {
+  [Theme.BLACK]: {
     backgroundColor: 'rgba(2, 2, 2, 1)',
     color: '#ffffff',
     navbarBg: 'rgba(2, 2, 2, 1)',
@@ -49,7 +51,7 @@ interface ThemeContextType {
 const ThemeContext = createContext<ThemeContextType | undefined>(undefined);
 
 export function ThemeProvider({ children }: { children: React.ReactNode }) {
-  const [theme, setTheme] = useState<Theme>(Theme.LIGHT_BLACK);
+  const [theme, setTheme] = useState<Theme>(Theme.BLACK);
 
   // Load theme from localStorage on mount
   useEffect(() => {

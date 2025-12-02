@@ -24,7 +24,7 @@ export default function NavigationBar() {
     { name: 'About', path: '/about' },
   ];
 
-  const isDarkTheme = theme === Theme.DARK_BLUE || theme === Theme.LIGHT_BLACK;
+  const isDarkTheme = theme === Theme.DARK_BLUE || theme === Theme.BLACK;
 
   return (
     <header
