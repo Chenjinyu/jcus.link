@@ -23,6 +23,9 @@ import {
   PromptInputTools,
 } from '@/components/ai-elements/prompt-input';
 import {
+  Message, 
+  MessageContent, 
+  MessageResponse ,
   MessageActions,
   MessageAction,
 } from '@/components/ai-elements/message';
@@ -34,8 +37,8 @@ import {
   ConversationContent,
   ConversationScrollButton,
 } from '@/components/ai-elements/conversation';
-import { Message, MessageContent, MessageResponse } from '@/components/ai-elements/message';
 import { useTheme, THEME_STYLES } from '@/app/context/ThemeContext';
+import { MessageRole } from '@/app/types';
 
 const models = [
   { id: 'gpt-4o', name: 'GPT-4o' },
@@ -43,30 +46,59 @@ const models = [
 ];
 
 // =============================================================================
+// THEME HELPER - CHeck if theme is dark
+// =============================================================================
+const isDarkTheme = (theme: string): boolean => {
+  return theme === 'black' || theme === 'dark_blue';
+};
+
+// =============================================================================
 // AVATAR COMPONENT
 // =============================================================================
 interface AvatarProps {
-  role: 'user' | 'assistant';
+  role: MessageRole;
+  theme: string,
   themeStyle: Record<string, string>;
 }
 
-const Avatar = ({ role, themeStyle }: AvatarProps) => {
+const Avatar = ({ role, theme, themeStyle }: AvatarProps) => {
   const isUser = role === 'user';
-  
+  const isSystem = role === 'system';
+  const isDark = isDarkTheme(theme);
+
+  // assitant avatar styles based on theme
+  const getAssistantAvatarStyle = () => {
+    if (isDark) {
+      // Dark theme: white bg, dark icon
+      return {
+        backgroundColor: '#ffffff',
+        color: '#1f2937', // dark gray
+      };
+    }else {
+      // Light themes: keep the gradient (handled by className)
+      return undefined;
+    }
+
+  }
   return (
     <div
       className={`
         flex items-center justify-center w-8 h-8 rounded-full shrink-0 text-sm font-medium
         transition-all duration-200
         ${isUser 
-          ? 'bg-zinc-900 text-white dark:bg-zinc-100 dark:text-zinc-900' 
-          : 'bg-gradient-to-br from-violet-500 to-purple-600 text-white shadow-sm'
+          ? ''
+          : isDark
+            ? 'bg-zinc-900 text-white dark:bg-zinc-100 dark:text-zinc-900' 
+            : 'bg-gradient-to-br from-violet-500 to-purple-600 text-white shadow-sm'
         }
       `}
-      style={isUser ? { 
-        backgroundColor: themeStyle.color,
-        color: themeStyle.backgroundColor 
-      } : undefined}
+      style={isUser 
+        ? { 
+          backgroundColor: themeStyle.color,
+          color: themeStyle.backgroundColor 
+        }
+        : getAssistantAvatarStyle()
+      }
     >
       {isUser ? <User size={16} /> : <Sparkles size={16} />}
     </div>
@@ -77,7 +109,7 @@ const Avatar = ({ role, themeStyle }: AvatarProps) => {
 // ROLE LABEL COMPONENT
 // =============================================================================
 interface RoleLabelProps {
-  role: 'user' | 'assistant';
+  role: MessageRole;
 }
 
 const RoleLabel = ({ role }: RoleLabelProps) => (
@@ -149,25 +181,54 @@ const MessageActionsBar = ({ content, isLatest, onRegenerate }: MessageActionsBa
 interface StyledMessageProps {
   message: {
     id: string;
-    role: 'user' | 'assistant';
+    role: MessageRole;
     parts: Array<{ type: string; text?: string }>;
   };
   isLatest: boolean;
+  theme: string,
   themeStyle: Record<string, string>;
   onRegenerate?: () => void;
 }
 
-const StyledMessage = ({ message, isLatest, themeStyle, onRegenerate }: StyledMessageProps) => {
+const StyledMessage = ({ message, isLatest, theme, themeStyle, onRegenerate }: StyledMessageProps) => {
+  const isDark = isDarkTheme(theme);
   const isUser = message.role === 'user';
+  const isSystem = message.role === 'system';
   const textContent = message.parts
     .filter(part => part.type === 'text')
     .map(part => part.text)
     .join('\n');
 
+  // Get user message bubble styles based on theme
+  const getUserBubbleStyle = () => {
+    if (isDark) {
+       // Dark themes: light-gray background
+      return {
+        backgroundColor: '#ffffff', // light-gray (gray-300)
+        color: '#1f2937', // dark-gray text
+      };
+    } else {
+      // Light themes: dark-gray background
+      return {
+        backgroundColor: '#4b5563', // dark-gray (gray-600)
+        color: '#ffffff', // white text
+      };
+    }
+  };
+
+  // Handle copy action
+  const handleCopy = () => {
+    navigator.clipboard.writeText(textContent);
+  };
+
   return (
     <div className={`group flex gap-3 ${isUser ? 'flex-row-reverse' : ''} py-4`}>
       {/* Avatar */}
-      <Avatar role={message.role} themeStyle={themeStyle} />
+      <Avatar 
+        role={message.role} 
+        theme={theme}
+        themeStyle={themeStyle} 
+      />
 
       {/* Content */}
       <div className={`flex-1 min-w-0 ${isUser ? 'flex flex-col items-end' : ''}`}>
@@ -178,17 +239,22 @@ const StyledMessage = ({ message, isLatest, themeStyle, onRegenerate }: StyledMe
         <div
           className={`
             ${isUser
-              ? 'bg-zinc-900 dark:bg-zinc-100 text-white dark:text-zinc-900 rounded-2xl rounded-tr-md px-4 py-3 max-w-[85%]'
-              : 'max-w-full'
+              ? 'rounded-2xl rounded-tr-md px-4 py-3 shadow-sm [&_.is-user]:bg-transparent [&_*]:bg-transparent'
+              : 'max-w-full [&_.is-assistant]:bg-transparent [&_*]:bg-transparent'
             }
           `}
-          style={isUser ? {
-            backgroundColor: themeStyle.color,
-            color: themeStyle.backgroundColor
-          } : undefined}
+          style={isUser 
+            ? getUserBubbleStyle()
+            : undefined}
         >
-          <Message from={message.role}>
-            <MessageContent>
+          <Message from={message.role}
+            className="!bg-transparent [&>*]:!bg-transparent"
+            style={{ backgroundColor: 'transparent' }}
+          >
+            <MessageContent
+              className="!bg-transparent [&>*]:!bg-transparent"
+              style={{ backgroundColor: 'transparent' }}
+            >
               {message.parts.map((part, i) => {
                 switch (part.type) {
                   case 'text':
@@ -205,13 +271,36 @@ const StyledMessage = ({ message, isLatest, themeStyle, onRegenerate }: StyledMe
           </Message>
         </div>
 
-        {/* Actions for assistant messages */}
+        {/* Actions for assistant messages - using AI Elements components */}
         {!isUser && (
-          <MessageActionsBar 
-            content={textContent} 
-            isLatest={isLatest} 
-            onRegenerate={onRegenerate}
-          />
+          <MessageActions className="mt-2 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
+            <MessageAction
+              onClick={handleCopy}
+              label="Copy"
+            >
+              <Copy className="size-3" />
+            </MessageAction>
+            {isLatest && onRegenerate && (
+              <MessageAction
+                onClick={onRegenerate}
+                label="Regenerate"
+              >
+                <RefreshCcw className="size-3" />
+              </MessageAction>
+            )}
+            <MessageAction
+              onClick={() => console.log('Positive feedback')}
+              label="Good response"
+            >
+              <ThumbsUp className="size-3" />
+            </MessageAction>
+            <MessageAction
+              onClick={() => console.log('Negative feedback')}
+              label="Bad response"
+            >
+              <ThumbsDown className="size-3" />
+            </MessageAction>
+          </MessageActions>
         )}
       </div>
     </div>
@@ -222,34 +311,63 @@ const StyledMessage = ({ message, isLatest, themeStyle, onRegenerate }: StyledMe
 // LOADING INDICATOR
 // =============================================================================
 interface LoadingIndicatorProps {
+  theme: string;
   themeStyle: Record<string, string>;
 }
 
-const LoadingIndicator = ({ themeStyle }: LoadingIndicatorProps) => (
-  <div className="flex gap-3 py-4">
-    <div className="flex items-center justify-center w-8 h-8 rounded-full shrink-0 bg-gradient-to-br from-violet-500 to-purple-600 text-white shadow-sm">
+const LoadingIndicator = ({ theme, themeStyle }: LoadingIndicatorProps) => {
+  const isDark = isDarkTheme(theme);
+
+  return (
+    <div className="flex gap-3 py-4">
+    <div className={`
+      flex items-center justify-center w-8 h-8 rounded-full shrink-0 shadow-sm
+      ${isDark ? '' : 'bg-gradient-to-br from-violet-500 to-purple-600 text-white'}
+      `}
+      style={isDark ? { backgroundColor: '#ffffff', color: '#1f2937' } : undefined}
+      >
       <Sparkles size={16} />
     </div>
     <div>
       <div className="text-xs font-medium opacity-60 mb-1.5">Assistant</div>
       <div className="flex items-center gap-1.5 py-2">
-        <div className="w-2 h-2 bg-violet-400 rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
-        <div className="w-2 h-2 bg-violet-400 rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
-        <div className="w-2 h-2 bg-violet-400 rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
+        <div className="w-2 h-2 bg-violet-400 rounded-full animate-bounce"
+         style={{ 
+            animationDelay: '0ms',
+            backgroundColor: isDark ? '#9ca3af' : '#a78bfa'
+          }} 
+        />
+        <div 
+            className="w-2 h-2 rounded-full animate-bounce" 
+            style={{ 
+              animationDelay: '150ms',
+              backgroundColor: isDark ? '#9ca3af' : '#a78bfa'
+            }} 
+          />
+          <div 
+            className="w-2 h-2 rounded-full animate-bounce" 
+            style={{ 
+              animationDelay: '300ms',
+              backgroundColor: isDark ? '#9ca3af' : '#a78bfa'
+            }} 
+          />
       </div>
     </div>
   </div>
-);
+  );
+};
 
 // =============================================================================
 // EMPTY STATE
 // =============================================================================
 interface EmptyStateProps {
+  theme: string;
   themeStyle: Record<string, string>;
   onSuggestionClick: (text: string) => void;
 }
 
-const EmptyState = ({ themeStyle, onSuggestionClick }: EmptyStateProps) => {
+const EmptyState = ({ theme, themeStyle, onSuggestionClick }: EmptyStateProps) => {
+  const isDark = isDarkTheme(theme);
   const suggestions = [
     "What can you help me with?",
     "Tell me about yourself",
@@ -259,8 +377,11 @@ const EmptyState = ({ themeStyle, onSuggestionClick }: EmptyStateProps) => {
 
   return (
     <div className="flex flex-col items-center justify-center h-full py-12 px-4">
-      <div className="flex items-center justify-center w-16 h-16 bg-gradient-to-br from-violet-500 to-purple-600 rounded-2xl shadow-lg mb-6">
-        <Sparkles size={32} className="text-white" />
+      <div className={`
+        flex items-center justify-center w-16 h-16 rounded-2xl shadow-lg mb-6
+        ${isDark ? '': 'bg-gradient-to-br from-violet-500 to-purple-600'}
+      `}>
+        <Sparkles size={32} style={{ color: isDark ? '#1f2937' : '#ffffff' }} />
       </div>
       <h2 className="text-xl font-semibold mb-2" style={{ color: themeStyle.color }}>
         Start a conversation
@@ -281,9 +402,9 @@ const EmptyState = ({ themeStyle, onSuggestionClick }: EmptyStateProps) => {
               color: themeStyle.color,
               backgroundColor: 'transparent',
             }}
-            onMouseEnter={(e) => {
-              e.currentTarget.style.backgroundColor = themeStyle.navbarBorder;
-            }}
+            // onMouseEnter={(e) => {
+            //   e.currentTarget.style.backgroundColor = themeStyle.navbarBorder;
+            // }}
             onMouseLeave={(e) => {
               e.currentTarget.style.backgroundColor = 'transparent';
             }}
@@ -353,6 +474,7 @@ const ChatInputWindowComponent = () => {
         <ConversationContent className="px-4">
           {messages.length === 0 ? (
             <EmptyState 
+              theme={theme}
               themeStyle={themeStyle} 
               onSuggestionClick={handleSuggestionClick} 
             />
@@ -363,11 +485,12 @@ const ChatInputWindowComponent = () => {
                   key={message.id}
                   message={message}
                   isLatest={index === messages.length - 1 && message.role === 'assistant'}
+                  theme={theme}
                   themeStyle={themeStyle}
                 />
               ))}
               {isLoading && messages[messages.length - 1]?.role === 'user' && (
-                <LoadingIndicator themeStyle={themeStyle} />
+                <LoadingIndicator theme={theme} themeStyle={themeStyle} />
               )}
             </>
           )}
@@ -377,10 +500,13 @@ const ChatInputWindowComponent = () => {
 
       {/* Input Area */}
       <div 
-        className="border-t"
-        style={{ borderColor: themeStyle.navbarBorder }}
+        className="w-full px-4 pb-4"
+        // style={{ borderColor: themeStyle.navbarBorder }}
       >
-        <PromptInput onSubmit={handleSubmit} className="border-0 shadow-none" globalDrop multiple>
+        <PromptInput onSubmit={handleSubmit} 
+          globalDrop 
+          multiple
+        >
           <PromptInputHeader>
             <PromptInputAttachments>
               {(attachment) => <PromptInputAttachment data={attachment} />}
@@ -395,6 +521,9 @@ const ChatInputWindowComponent = () => {
               style={{
                 backgroundColor: 'transparent',
                 color: themeStyle.color,
+                border: 'none',
+                outline: 'none',
+                boxShadow: 'none',
               }}
             />
           </PromptInputBody>

@@ -18,6 +18,17 @@ export interface User {
   provider: AuthProvider;
 }
 
+// Role	       |     Purpose	                     |      Visibility
+// "user"	     | Messages from the person chatting | Displayed in chat (right-aligned)
+// "assistant" |	Responses from the AI model	     | Displayed in chat (left-aligned)
+// "system"	   | Instructions for the AI model	   | Typically hidden from users
+
+// Example of system messages: 
+// "You are a helpful coding assistant. Always provide clear explanations."
+// "Respond in concise bullet points."
+// "Always cite your sources."
+export type MessageRole = 'user' | 'assistant' | 'system';
+
 export type Message = {
   id: string;
   name?: string;

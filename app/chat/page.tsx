@@ -1,7 +1,8 @@
 'use client';
 
 import React from "react";
-import { ChatInputWindow } from '@/app/customs/chat-interface/chat-input-window';
+// import { ChatInputWindow } from '@/app/customs/chat-interface/chat-input-window';
+import { ChatInputWindow } from "@/app/customs/chat-interface/chat-input-window-2";
 
 export default function ChatPage() {
   return (
