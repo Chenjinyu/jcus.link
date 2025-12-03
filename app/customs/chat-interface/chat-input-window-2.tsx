@@ -239,7 +239,7 @@ const StyledMessage = ({ message, isLatest, theme, themeStyle, onRegenerate }: S
         <div
           className={`
             ${isUser
-              ? 'rounded-2xl rounded-tr-md px-4 py-3 shadow-sm [&_.is-user]:bg-transparent [&_*]:bg-transparent'
+              ? 'flex flex-col gap-4' //'rounded-2xl rounded-tr-md px-4 py-3 shadow-sm [&_.is-user]:bg-transparent [&_*]:bg-transparent'
               : 'max-w-full [&_.is-assistant]:bg-transparent [&_*]:bg-transparent'
             }
           `}
@@ -462,7 +462,7 @@ const ChatInputWindowComponent = () => {
 
   return (
     <div
-      className="w-full h-full flex flex-col rounded-xl border shadow-sm overflow-hidden"
+      className="w-full h-1/2 md:h-full flex flex-col rounded-xl border shadow-sm overflow-hidden"
       style={{
         backgroundColor: themeStyle.backgroundColor,
         borderColor: themeStyle.navbarBorder,
@@ -470,7 +470,7 @@ const ChatInputWindowComponent = () => {
       }}
     >
       {/* Conversation Area */}
-      <Conversation className="flex-1 min-h-0">
+      <Conversation className="flex-1 min-h-0 overflow-y-auto">
         <ConversationContent className="px-4">
           {messages.length === 0 ? (
             <EmptyState 
@@ -501,6 +501,7 @@ const ChatInputWindowComponent = () => {
       {/* Input Area */}
       <div 
         className="w-full px-4 pb-4"
+        style={{border: 'none'}}
         // style={{ borderColor: themeStyle.navbarBorder }}
       >
         <PromptInput onSubmit={handleSubmit} 

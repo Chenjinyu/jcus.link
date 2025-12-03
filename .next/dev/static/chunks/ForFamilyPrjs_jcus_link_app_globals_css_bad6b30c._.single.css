@@ -677,6 +677,11 @@ body {
   height: 100%;
 }
 
+.size-40 {
+  width: 10rem;
+  height: 10rem;
+}
+
 .h-10 {
   height: 2.5rem;
 }
@@ -743,6 +748,30 @@ body {
 
 .h-px {
   height: 1px;
+}
+
+.h-screen {
+  height: 100vh;
+}
+
+.h-96 {
+  height: 24rem;
+}
+
+.h-dvh {
+  height: 100dvh;
+}
+
+.h-lvh {
+  height: 100lvh;
+}
+
+.h-svh {
+  height: 100svh;
+}
+
+.h-1\/2 {
+  height: 50%;
 }
 
 .max-h-40 {
@@ -3100,6 +3129,10 @@ body {
 }
 
 @media (min-width: 768px) {
+  .md\:h-full {
+    height: 100%;
+  }
+
   .md\:text-4xl {
     font-size: 2.25rem;
     line-height: 2.5rem;
