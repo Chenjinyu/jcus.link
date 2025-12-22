@@ -8,6 +8,7 @@ export const maxDuration = 60; // Allow longer timeout for file processing
  * 
  * Handles file uploads and forwards them to the MCP server
  * Supports: PDF, DOCX, TXT, MD, HTML, XML, URLs
+ * date: 2025-12-21
  */
 export async function POST(req: NextRequest) {
   try {
@@ -60,14 +61,14 @@ export async function POST(req: NextRequest) {
       const allowedExtensions = ['.pdf', '.doc', '.docx', '.txt', '.md', '.html', '.xml', '.htm'];
 
       const fileExtension = fileName.substring(fileName.lastIndexOf('.')).toLowerCase();
-      const isValidType = 
-        allowedTypes.includes(file.type) || 
+      const isValidType =
+        allowedTypes.includes(file.type) ||
         allowedExtensions.some(ext => fileName.toLowerCase().endsWith(ext));
 
       if (!isValidType) {
         return NextResponse.json(
-          { 
-            error: 'Invalid file type. Supported types: PDF, DOC, DOCX, TXT, MD, HTML, XML' 
+          {
+            error: 'Invalid file type. Supported types: PDF, DOC, DOCX, TXT, MD, HTML, XML'
           },
           { status: 400 }
         );
@@ -97,11 +98,11 @@ export async function POST(req: NextRequest) {
   } catch (error) {
     console.error('[MCP Upload] Error:', error);
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-    
+
     return NextResponse.json(
-      { 
+      {
         error: 'Failed to upload to MCP server',
-        details: errorMessage 
+        details: errorMessage
       },
       { status: 500 }
     );

@@ -30,7 +30,7 @@ export default function HomePage() {
           </div>
 
           {/* Title */}
-          <h1 className="text-3xl sm:text-4xl md:text-6xl font-bold mb-3 animate-fade-in-up">
+          <h1 className="text-3xl sm:text-4xl md:text-6xl font-bold mb-3 animate-fade-in-up  mb-8">
             <span className="text-gray-400" style={{ color: themeStyle.color }}>JCUS.LINK</span>
           </h1>
 
@@ -50,7 +50,7 @@ export default function HomePage() {
             </p>
             <p
               className="text-lg sm:text-2xl text-gray-300 font-light mb-8 sm:mb-12"
-              style={{ color: themeStyle.color, opacity: 0.85 }}
+              style={{ color: themeStyle.color, opacity: 0.65 }}
             >
               "Query My Experience: An AI-Powered Portfolio."
             </p>
