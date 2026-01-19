@@ -20,7 +20,7 @@ export const models = [
  * Get only available models
  */
 export const getAvailableModels = () => {
-  return models.filter(model => model.available === true && model.env === 'prod');
+  return models.filter(model => model.available === true && model.env === 'production');
 };
 
 /**
