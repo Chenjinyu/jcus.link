@@ -36,7 +36,7 @@ async function getMCPClient(): Promise<any> {
   
   mcpClient = new Client(
     {
-      name: "jcus.link",
+      name: "jcus-link-mcp",
       version: "1.0.0",
     },
     {
@@ -50,95 +50,11 @@ async function getMCPClient(): Promise<any> {
   return mcpClient;
 }
 
-/**
- * Upload a job description file to MCP server
- */
-export async function uploadJobDescriptionToMCP(
-  fileData: Buffer | string,
-  fileName: string,
-  inputType: 'text' | 'file' | 'url' = 'file'
-): Promise<{ job_id: string; status: string; message: string }> {
-  const client = await getMCPClient();
-  
-  let inputData: string;
-  if (inputType === 'file') {
-    const buffer = Buffer.isBuffer(fileData) ? fileData : Buffer.from(fileData);
-    inputData = buffer.toString('base64');
-  } else {
-    inputData = fileData.toString();
-  }
-
-  const result = await client.callTool('upload_job_description', {
-    input_data: inputData,
-    input_type: inputType,
-    filename: inputType === 'file' ? fileName : undefined,
-  });
-
-  // Extract text content from SDK response
-  if (result.content && result.content.length > 0) {
-    const textContent = result.content.find((c: any) => c.type === 'text');
-    if (textContent) {
-      return JSON.parse(textContent.text);
-    }
-  }
-
-  throw new Error('Invalid response from MCP server');
-}
 
 /**
- * Search for matching resumes based on job description
- */
-export async function searchMatchingResumes(
-  jobDescription: string,
-  topK: number = 5,
-  jobId?: string
-): Promise<{ matches: any[]; total_found: number; job_id: string }> {
-  const client = await getMCPClient();
-
-  const payload: Record<string, any> = {
-    top_k: topK,
-  };
-  if (jobDescription) {
-    payload.job_description = jobDescription;
-  } else if (jobId) {
-    payload.job_id = jobId;
-  }
-
-  const result = await client.callTool('search_matching_resumes', payload);
-
-  if (result.content && result.content.length > 0) {
-    const textContent = result.content.find((c: any) => c.type === 'text');
-    if (textContent) {
-      return JSON.parse(textContent.text);
-    }
-  }
-
-  throw new Error('Invalid response from MCP server');
-}
-
-/**
- * Analyze a job description
- */
-export async function analyzeJobDescription(jobDescription: string): Promise<any> {
-  const client = await getMCPClient();
-  
-  const result = await client.callTool('analyze_job_description', {
-    job_description: jobDescription,
-  });
-
-  if (result.content && result.content.length > 0) {
-    const textContent = result.content.find((c: any) => c.type === 'text');
-    if (textContent) {
-      const parsed = JSON.parse(textContent.text);
-      return parsed.analysis || parsed;
-    }
-  }
-
-  throw new Error('Invalid response from MCP server');
-}
-
-/**
- * Generate a resume based on job description and matched profiles
+ * Generate a resume based on job description and matched profiles.
+ * the resume will include matches and not matches.
+ * TODO: the function needs to review, coz it has coverlay with generateMatchedResume
  */
 export async function generateResume(
   jobDescription: string,
@@ -169,6 +85,71 @@ export async function generateResume(
   throw new Error('Invalid response from MCP server');
 }
 
+type SupportedInputType = 'pdf' | 'doc' | 'docs' | 'txt' | 'html' | 'url';
+
+/**
+ * Generate a matched resume from a job description file or URL.
+ * It includes matched and not-matched work experience.
+ */
+export async function generateMatchedResume(
+  inputType: SupportedInputType,
+  inputData: string,
+  filename: string,
+  topK: number = 10,
+  threshold: number = 0.5
+): Promise<string> {
+  const client = await getMCPClient();
+
+  const payload = {
+    input_type: inputType,
+    filename: filename,
+    input_data: inputData,
+    top_k: topK,
+    threshold: threshold,
+  };
+
+  const result = await client.callTool('generate_matched_resume', payload);
+
+  if (result.content && result.content.length > 0) {
+    const textContent = result.content.find((c: any) => c.type === 'text');
+    if (textContent) {
+      return textContent.text;
+    }
+  }
+
+  throw new Error('Invalid response from MCP server');
+}
+
+export async function searchSimilarityContent(
+  inputText: string,
+  topK: number = 10,
+  threshold: number = 0.7
+){
+  const client = await getMCPClient();
+  console.log("perparing the payload sends to mcp server.");
+  const payload = {
+    input_text: inputText,
+    top_k: topK,
+    threshold: threshold,
+  };
+
+  const result = await client.callTool('search_similar_content', payload);
+  
+  if (result.content && result.content.length > 0) {
+    const textContent = result.content.find((c: any) => c.type === 'text');
+    if (textContent) {
+      return textContent.text;
+    }
+  }
+
+  throw new Error('Invalid response from MCP server');
+}
+
+export async function searchMatchedResumes(
+){
+  console.log("Implemented");
+}
+
 /**
  * List all available tools
  */
@@ -195,13 +176,15 @@ export async function selectMCPToolsForQuery(query: string): Promise<{
   let reasoning = '';
 
   if (
-    lowerQuery.includes('job description') ||
-    lowerQuery.includes('job posting') ||
-    lowerQuery.includes('upload job') ||
-    lowerQuery.includes('job ad')
+    lowerQuery.includes('work experience') ||
+    lowerQuery.includes('working experience') ||
+    lowerQuery.includes('background') ||
+    lowerQuery.includes('skills') ||
+    lowerQuery.includes('position') ||
+    lowerQuery.includes('role')
   ) {
-    selectedTools.push('upload_job_description');
-    reasoning += 'Detected job description upload request. ';
+    selectedTools.push('searchSimilarityContent');
+    reasoning += 'Detected asking author background. ';
   }
 
   if (
@@ -211,18 +194,8 @@ export async function selectMCPToolsForQuery(query: string): Promise<{
     lowerQuery.includes('matching candidates') ||
     lowerQuery.includes('similar resume')
   ) {
-    selectedTools.push('search_matching_resumes');
+    selectedTools.push('searchMatchedResumes');
     reasoning += 'Detected resume search request. ';
-  }
-
-  if (
-    lowerQuery.includes('analyze job') ||
-    lowerQuery.includes('job requirements') ||
-    lowerQuery.includes('job skills') ||
-    lowerQuery.includes('what does this job')
-  ) {
-    selectedTools.push('analyze_job_description');
-    reasoning += 'Detected job analysis request. ';
   }
 
   if (
@@ -233,18 +206,9 @@ export async function selectMCPToolsForQuery(query: string): Promise<{
     lowerQuery.includes('update resume') ||
     lowerQuery.includes('optimize resume')
   ) {
-    selectedTools.push('generate_resume');
+    selectedTools.push('generateMatchedResume');
     selectedPrompts.push('resume_generation_prompt');
     reasoning += 'Detected resume generation request. ';
-  }
-
-  if (
-    lowerQuery.includes('list job') ||
-    lowerQuery.includes('show jobs') ||
-    lowerQuery.includes('all jobs')
-  ) {
-    selectedTools.push('list_matched_job_descriptions');
-    reasoning += 'Detected job listing request. ';
   }
 
   if (selectedTools.length === 0) {

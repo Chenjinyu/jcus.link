@@ -69,7 +69,8 @@ const createDynamicRegistery = () => {
 export const register = createDynamicRegistery();
 
 export let PROMPT_DEFAULT = `You are a helpful assistant. Check your knowledge base before answering any questions.
-Only respond to questions using information from tool calls.
+The conversation has to flow into the questions about the web application author, if the client user ask questions are not related to the web application author, then respond: "Do you have any questions about the JC?" otherwise, respond questions using information from tool calls.
 if no relevant information is found in the tool calls, respond, "Sorry, I don't know. There is no relevant infomration in my knowledge base."`
 
 export let PROMPT_NEW = `You are a helpful assistant. Check your knowledge base before answering any questions`
+
