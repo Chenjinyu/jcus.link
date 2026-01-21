@@ -1,103 +1,36 @@
-import {
-  convertToModelMessages,
+import { 
+  convertToModelMessages, 
+  stepCountIs, 
   streamText,
   tool,
-  UIMessage,
-  stepCountIs,
+  UIMessage
 } from 'ai';
 import { z } from 'zod';
-// import { openai } from '@ai-sdk/openai';
 import { envConfig } from '@/app/configs/environment';
-import { register, PROMPT_DEFAULT } from '@/app/utils/ai-model-services/ModelRegistry';
-import { JOB_MATCH_COMMAND, JOB_MATCH_PROMPT_TOKEN } from '@/app/constants';
+import { 
+  register, 
+  PROMPT_DEFAULT,
+  USER_BASIC_INFO,
+  RESUME_BASIC_INFO,
+} from '@/app/utils/ai-model-services/ModelRegistry';
 import {
-  uploadJobDescriptionToMCP,
-  searchMatchingResumes,
-  analyzeJobDescription,
-  generateResume,
-  selectMCPToolsForQuery,
+  getAllWorkExperience,
+  searchSimilarityContent,
+  getMatchedResumes,
 } from '@/app/utils/mcp-client-sdk';
+import {
+  resolveInputType,
+  SupportedInputType,
+  getFilename,
+  isHttpUrl,
+  extractBase64FromDataUrl,
+  extractFirstUrl,
+  extractUserQuery,
+  getMessageAttachments
+} from './chat-utils';
 
 console.log(`[INIT] Chat route loaded in ${envConfig.env} environment`);
 export const maxDuration = 60; // Increased for MCP operations
-
-const jobMatchSessions = new Map<
-  string,
-  {
-    jobDescription: string;
-    matches: any[];
-    uploadedJobIds: string[];
-  }
->();
-
-const normalizeDecision = (input: string): 'yes' | 'no' | null => {
-  const normalized = input.trim().toLowerCase();
-  if (normalized === 'yes' || normalized === 'y') {
-    return 'yes';
-  }
-  if (normalized === 'no' || normalized === 'n') {
-    return 'no';
-  }
-  return null;
-};
-
-const extractTextFromDataUrl = (dataUrl: string): string | null => {
-  if (!dataUrl.startsWith('data:')) {
-    return null;
-  }
-  const [meta, data] = dataUrl.split(',');
-  if (!meta || data == null) {
-    return null;
-  }
-  const isBase64 = meta.includes(';base64');
-  try {
-    return isBase64 ? Buffer.from(data, 'base64').toString('utf8') : decodeURIComponent(data);
-  } catch (error) {
-    console.warn('[CHAT] Failed to decode data URL text:', error);
-    return null;
-  }
-};
-
-const extractMatchScore = (match: any): number | null => {
-  const rawScore =
-    match?.similarity ??
-    match?.score ??
-    match?.match_score ??
-    match?.match_rate ??
-    match?.similarity_score ??
-    null;
-  if (typeof rawScore !== 'number' || Number.isNaN(rawScore)) {
-    return null;
-  }
-  const normalized = rawScore <= 1 ? rawScore * 100 : rawScore;
-  return Math.max(0, Math.min(100, Math.round(normalized)));
-};
-
-const formatMatchSummary = (matches: any[]): { summary: string; topRate: number | null } => {
-  if (!Array.isArray(matches) || matches.length === 0) {
-    return {
-      summary: 'No matching resumes were found for the uploaded job description.',
-      topRate: null,
-    };
-  }
-
-  const topMatches = matches.slice(0, 5).map((match, index) => {
-    const name =
-      match?.name ??
-      match?.candidate_name ??
-      match?.title ??
-      match?.id ??
-      `Candidate ${index + 1}`;
-    const score = extractMatchScore(match);
-    return score === null ? `- ${name}` : `- ${name}: ${score}% match`;
-  });
-
-  const topRate = extractMatchScore(matches[0]);
-  return {
-    summary: `Top matches:\n${topMatches.join('\n')}`,
-    topRate,
-  };
-};
 
 export async function POST(req: Request) {
   if (envConfig.debugMode) {
@@ -106,304 +39,155 @@ export async function POST(req: Request) {
 
   try {
     const body = await req.json();
-    console.log('[DEBUG] Request body keys:', Object.keys(body));
+    const messages = body.messages || [];
+    const selectedModel = body.selectedModel || envConfig.defaultModel;
 
-    const messages = body.messages as UIMessage[];
-    let selectedModel = body.selectedModel || envConfig.defaultModel;
-    const webSearch = body.webSearch || false;
-    const conversationId = body.conversationId || 'default';
-
-    if (messages.length == 0) {
+    if (messages.length === 0) {
       throw new Error('No messages provided');
     }
-    // Get the last user message to analyze for MCP tool selection
-    const lastUserMessage = messages
-      .filter((m) => m.role === 'user')
-      .pop();
 
-    const attachments = (lastUserMessage as any)?.experimental_attachments || [];
+    const lastUserMessage = messages.filter((m: any) => m.role === 'user').pop();
+    const userQuery = extractUserQuery(lastUserMessage);
+    const attachments = lastUserMessage ? getMessageAttachments(lastUserMessage) : [];
+    const urlFromText = extractFirstUrl(userQuery);
 
-    console.log('[DEBUG] Last User Message Attachments: ', {
-      hasAttachments: attachments.length > 0,
-      attachmentCount: attachments.length,
-    });
-
-    /**
-     * Extract text from message parts with proper type narrowing, this is a type guard(type predicate)
-     * parts is likely defined as a union type of { type: 'text' } | { type: 'file' } | { type: 'url' }
-     * It might not issue during dev or debug env.
-     * Extract<> is a typescript utility type that extracts the type from the union type
-     * Extract<typeof part, { type: 'text' }>, result: {type: 'text', text: string}
-     * without Extract<>, will raise type error: part.text does not exist during npm run build.
-     * because typescript does not know .filter() returns a text type from parts.
-     */
-    const userQuery = lastUserMessage?.parts
-      .filter((part): part is Extract<typeof part, { type: 'text' }> => part.type === 'text')
-      .map(part => part.text)
-      .join(' ') || '';
-
-    const trimmedQuery = userQuery.trim();
-    const isJobMatchCommand = trimmedQuery.toLowerCase().startsWith(JOB_MATCH_COMMAND);
-    const jobMatchPayload = isJobMatchCommand
-      ? trimmedQuery.slice(JOB_MATCH_COMMAND.length).trim()
-      : trimmedQuery;
-    const decision = normalizeDecision(jobMatchPayload);
-
-    // Intelligently select MCP tools based on user query
-    const mcpToolSelection = await selectMCPToolsForQuery(userQuery);
-
-    if (envConfig.debugMode) {
-      console.log('[MCP] Tool selection:', mcpToolSelection);
-    }
-
-    // Check for file attachments in the last message
-    let hasJobDescriptionFiles = false;
-    const uploadedJobIds: string[] = [];
-
-    if (lastUserMessage && (lastUserMessage as any).files?.length > 0) {
-      const files = (lastUserMessage as any).files;
-      hasJobDescriptionFiles = true;
-
-      // Process files that look like job descriptions
-      for (const file of files) {
-        try {
-          // Check if file is a job description type (PDF, DOCX, etc.)
-          const isJobDescriptionFile =
-            file.mediaType?.includes('pdf') ||
-            file.mediaType?.includes('word') ||
-            file.mediaType?.includes('text') ||
-            file.mediaType?.includes('html') ||
-            file.mediaType?.includes('xml') ||
-            file.filename?.match(/\.(pdf|doc|docx|txt|md|html|xml)$/i);
-
-          if (isJobDescriptionFile) {
-            console.log(`[MCP] Processing job description file: ${file.filename}`);
-
-            // Extract file data from data URL if present
-            let fileData: Buffer | string = '';
-            let inputType: 'text' | 'file' | 'url' = 'file';
-
-            if (file.url && file.url.startsWith('data:')) {
-              // Extract base64 data from data URL
-              const base64Data = file.url.split(',')[1];
-              fileData = Buffer.from(base64Data, 'base64');
-            } else if (file.url && (file.url.startsWith('http://') || file.url.startsWith('https://'))) {
-              inputType = 'url';
-              fileData = file.url;
-            } else {
-              // Try to get text content if it's a text file
-              if (file.mediaType?.startsWith('text/')) {
-                inputType = 'text';
-                fileData = file.url || '';
-              } else {
-                continue; // Skip if we can't process it
-              }
-            }
-
-            // Upload to MCP server
-            const uploadResult = await uploadJobDescriptionToMCP(
-              fileData,
-              file.filename || 'job_description',
-              inputType
-            );
-
-            if (uploadResult.job_id) {
-              uploadedJobIds.push(uploadResult.job_id);
-              console.log(`[MCP] Successfully uploaded job description: ${uploadResult.job_id}`);
-            }
-          }
-        } catch (fileError) {
-          console.error('[MCP] Error processing file:', fileError);
-        }
-      }
-    }
-
-    if (isJobMatchCommand) {
-      const files = (lastUserMessage as any)?.files || [];
-      let jobDescriptionText = jobMatchPayload;
-
-      if (!jobDescriptionText && files.length > 0) {
-        for (const file of files) {
-          const isTextFile = file.mediaType?.startsWith('text/') || file.filename?.match(/\.(txt|md|html|xml)$/i);
-          if (!isTextFile) {
-            continue;
-          }
-
-          if (typeof file.url === 'string') {
-            const extractedText = extractTextFromDataUrl(file.url) || file.url;
-            if (extractedText.trim()) {
-              jobDescriptionText = extractedText.trim();
-              break;
-            }
-          }
-        }
-      }
-
-      if (!jobDescriptionText && uploadedJobIds.length === 0) {
-        const missingInputResponse = streamText({
-          model: register.languageModel(selectedModel),
-          messages: convertToModelMessages(messages),
-          system: `${PROMPT_DEFAULT}\n\nThe user requested /job_match but did not provide a job description. Ask them to paste the job description text or upload a file.`,
-        });
-        return missingInputResponse.toUIMessageStreamResponse();
-      }
-
-      let matchResults: { matches: any[]; total_found: number; job_id: string } | null = null;
-      const jobIdForSearch = !jobDescriptionText && uploadedJobIds.length > 0 ? uploadedJobIds[0] : undefined;
-      if (jobDescriptionText || jobIdForSearch) {
-        try {
-          matchResults = await searchMatchingResumes(jobDescriptionText, 5, jobIdForSearch);
-        } catch (matchError) {
-          console.error('[MCP] Failed to search matching resumes:', matchError);
-        }
-      }
-
-      if (matchResults) {
-        jobMatchSessions.set(conversationId, {
-          jobDescription: jobDescriptionText,
-          matches: matchResults.matches || [],
-          uploadedJobIds,
-        });
-      }
-
-      const { summary, topRate } = formatMatchSummary(matchResults?.matches || []);
-      const matchSummaryText = [
-        topRate !== null
-          ? `Best overall match: ${topRate}%`
-          : 'No match score was available yet.',
-        summary,
-        `Would you like me to generate an updated resume tailored to this job?`,
-      ].join('\n');
-
-      const jobMatchResponse = streamText({
-        model: register.languageModel(selectedModel),
-        messages: convertToModelMessages(messages),
-        system: `${PROMPT_DEFAULT}\n\nYou are responding to a /job_match request. Use the following match data:\n${matchSummaryText}\n\nRespond with that information, keep it concise, and include the token ${JOB_MATCH_PROMPT_TOKEN} on its own line at the end.`,
-      });
-      return jobMatchResponse.toUIMessageStreamResponse();
-    }
-
-    let knowledgeBaseContext = '';
-    if (userQuery.trim()) {
-      try {
-        knowledgeBaseContext = "TODO: Need to update";
-      } catch (error) {
-        console.warn('[CHAT] Similarity search failed:', error);
-      }
-    }
-
-    // Build system prompt with MCP context
-    let systemPrompt = PROMPT_DEFAULT;
-    if (knowledgeBaseContext) {
-      systemPrompt += `\n\nRelevant knowledge base context:\n${knowledgeBaseContext}\n\nUse this context to answer the user when relevant.`;
-    }
-    if (hasJobDescriptionFiles && uploadedJobIds.length > 0) {
-      systemPrompt += `\n\nYou have access to ${uploadedJobIds.length} uploaded job description(s) via MCP tools. Use the MCP tools to analyze, search, and generate resumes based on these job descriptions.`;
-    }
-
-    // Define MCP tools for the AI to use
-    const mcpTools: Record<string, any> = {};
-
-    // Add upload_job_description tool if job description files were detected
-    if (mcpToolSelection.tools.includes('upload_job_description') || hasJobDescriptionFiles) {
-      mcpTools.uploadJobDescription = tool({
-        description: `Upload a job description from text, file (base64), or URL to the MCP server for processing and matching. Use this when the user provides a job description or job posting.`,
-        inputSchema: z.object({
-          input_data: z.string().describe('Job description text, base64-encoded file, or URL'),
-          input_type: z.enum(['text', 'file', 'url']).describe('Type of input'),
-          filename: z.string().optional().describe('Filename (required for file type)'),
+    // Check for URL and attached files conflict
+    if (urlFromText && attachments.length > 0) {
+      return new Response(
+        JSON.stringify({
+          error: 'Cannot Determine Input Type',
+          details: 'Cannot determine whether to use the URL or attached file. Please either remove the URL from the message or remove the attachment.',
         }),
-        execute: async ({ input_data, input_type, filename }) => {
-          try {
-            const result = await uploadJobDescriptionToMCP(
-              input_data,
-              filename || 'job_description',
-              input_type
-            );
-            return result;
-          } catch (error) {
-            return {
-              error: error instanceof Error ? error.message : 'Failed to upload job description'
-            };
-          }
-        },
-      });
+        { status: 400, headers: { 'Content-Type': 'application/json' } }
+      );
     }
-
-    // Add search_matching_resumes tool
-    if (mcpToolSelection.tools.includes('search_matching_resumes')) {
-      mcpTools.searchMatchingResumes = tool({
-        description: `Search for resumes that match a job description using vector similarity search. Use this to find candidates from the developer background database stored in Supabase.`,
-        inputSchema: z.object({
-          job_description: z.string().describe('The job description text to match against'),
-          top_k: z.number().int().min(1).max(20).default(5).describe('Number of top matches to return'),
+    // Check for multiple files
+    if (attachments.length > 1) {
+      return new Response(
+        JSON.stringify({
+          error: 'Cannot Support Multi-Files',
+          details: 'Only support uploading a single file. Please remove extra attachments and keep one file.',
         }),
-        execute: async ({ job_description, top_k }) => {
-          try {
-            const result = await searchMatchingResumes(job_description, top_k);
-            return result;
-          } catch (error) {
-            return {
-              error: error instanceof Error ? error.message : 'Failed to search matching resumes'
-            };
-          }
-        },
-      });
+        { status: 400, headers: { 'Content-Type': 'application/json' } }
+      );
     }
 
-    // Add analyze_job_description tool
-    if (mcpToolSelection.tools.includes('analyze_job_description')) {
-      mcpTools.analyzeJobDescription = tool({
-        description: `Analyze a job description to extract key requirements, skills, experience level, and responsibilities. Use this to understand what a job posting is looking for.`,
-        inputSchema: z.object({
-          job_description: z.string().describe('The job description text to analyze'),
-        }),
-        execute: async ({ job_description }) => {
-          try {
-            const result = await analyzeJobDescription(job_description);
-            return result;
-          } catch (error) {
-            return {
-              error: error instanceof Error ? error.message : 'Failed to analyze job description'
-            };
-          }
-        },
-      });
+    // Requirement 4 & 5: Determine inputType and prepare inputData
+    let inputType: SupportedInputType | 'file' | null = null;
+    let inputData = '';
+    let filename = '';
+    const uploadedFile = attachments.length > 0 ? attachments[0] : null;
+
+    if (urlFromText) {
+      // URL provided in message
+      if (!isHttpUrl(urlFromText)) {
+        return new Response(
+          JSON.stringify({
+            error: 'Invalid URL input',
+            details: 'Provide a valid http(s) URL.',
+          }),
+          { status: 400, headers: { 'Content-Type': 'application/json' } }
+        );
+      }
+      inputType = 'url';
+      inputData = urlFromText;
+      filename = getFilename({ url: urlFromText });
+    } else if (uploadedFile) {
+      // File attached
+      inputType = resolveInputType(uploadedFile);
+      if (!inputType) {
+        return new Response(
+          JSON.stringify({
+            error: 'Unsupported file type',
+            details: 'Supported types: pdf, doc, docs, txt, html.',
+          }),
+          { status: 400, headers: { 'Content-Type': 'application/json' } }
+        );
+      }
+      const dataUrl = typeof uploadedFile?.url === 'string' ? uploadedFile.url : '';
+      const base64 = dataUrl ? extractBase64FromDataUrl(dataUrl) : null;
+      if (!base64) {
+        return new Response(
+          JSON.stringify({
+            error: 'Invalid file payload',
+            details: 'Expected a base64 data URL for file uploads.',
+          }),
+          { status: 400, headers: { 'Content-Type': 'application/json' } }
+        );
+      }
+      inputData = base64;
+      filename = getFilename(uploadedFile);
     }
 
-    // Add generate_resume tool
-    if (mcpToolSelection.tools.includes('generate_resume')) {
-      mcpTools.generateResume = tool({
-        description: `Generate an optimized resume based on a job description and matched candidate profiles from the database. Use this when the user wants to create or update a resume tailored to a specific job.`,
-        inputSchema: z.object({
-          job_description: z.string().describe('The job description to tailor the resume for'),
-          matched_resumes: z.array(z.any()).describe('List of matched resume profiles (from search_matching_resumes tool)'),
-        }),
-        execute: async ({ job_description, matched_resumes }) => {
-          try {
-            const result = await generateResume(job_description, matched_resumes);
-            return { resume: result };
-          } catch (error) {
-            return {
-              error: error instanceof Error ? error.message : 'Failed to generate resume'
-            };
-          }
-        },
-      });
-    }
-
-    const result = streamText({
+    const mcpResponse = streamText({
       model: register.languageModel(selectedModel),
       messages: convertToModelMessages(messages),
-      stopWhen: stepCountIs(10), // Increased for multi-step MCP operations
-      system: systemPrompt,
+      stopWhen: stepCountIs(5),
+      system: PROMPT_DEFAULT,
       tools: {
-        ...mcpTools,
-      },
+        getAllWorkExperience: tool({
+          description: `${USER_BASIC_INFO}, When the user asks the job experience and the skills, 
+          use this tool without asking for confirmation, and give the user the organized response`,
+          inputSchema: z.object({
+            content: z.string().describe('The message sends from user.'),
+          }),
+          execute: async({content}) => {
+            console.log('[DEBUG]route.ts.POST.tool.getAllWorkExperience with content:', { userQuery });
+            try{
+              console.log('[DEBUG]route.ts.POST.tool.getAllWorkExperience calling searchSimilarityContent()...');
+              const result = await getAllWorkExperience(content);
+              console.log('[DEBUG]route.ts.POST.tool.getAllWorkExperience result:', result);
+              return result;
+            }catch (error) {
+              console.error('[ERROR]route.ts.POST.tool.getAllWorkExperience failed:', error);
+              return {
+                error: 'Failed to search and get all work experiences',
+                details: error instanceof Error ? error.message : String(error)
+              };
+            }
+          }
+        }),
+        searchSimilarityContent: tool({
+          description: `${USER_BASIC_INFO}. Use this tool ONLY when the user asks about work experience, skills, or certifications. Extract keywords from the user's question and search for matching content in the database. Return organized results without asking for confirmation.`,
+          inputSchema: z.object({
+            inputText: z.string().describe('Keywords or phrases from the user query about work experience, skills, or certifications'),
+          }),
+          execute: async({inputText}) => {
+            console.log('[DEBUG]route.ts.POST.tool.searchSimilarityContent with inputText:', { userQuery });
+            try{
+              console.log('[DEBUG]route.ts.POST.tool.searchSimilarityContent calling searchSimilarityContent()...');
+              const result = await searchSimilarityContent(inputText);
+              console.log('[DEBUG]route.ts.POST.tool.searchSimilarityContent result:', result);
+              return result;
+            }catch (error) {
+              console.error('[ERROR]route.ts.POST.tool.searchSimilarityContent failed:', error);
+              return {
+                error: 'Failed to search similarity content',
+                details: error instanceof Error ? error.message : String(error)
+              };
+            }
+          }
+        }),
+        getMatchedResumes: tool({
+          description: `${RESUME_BASIC_INFO}, When the user attaches a file or paste a url link in the chat window, 
+          means the user wants to get the latest resume regarding the web application auther based on the job description the user provides
+          use this tool without asking for confirmation`,
+          inputSchema: z.object({}),
+          execute: async() => {
+            console.log('[DEBUG]route.ts.POST.tool.getMatchedResumes', { userQuery, inputType, inputData: inputData.substring(0, 50) + '...' });
+            if (!inputType || !inputData) {
+              return {
+                error: 'No job description provided. Please upload a file or provide a URL.'
+              };
+            }
+            const result = await getMatchedResumes(inputData, inputType as SupportedInputType, filename);
+            return result;
+          }
+        }),
+      }
     });
+    return mcpResponse.toUIMessageStreamResponse();
 
-    console.log('[DEBUG] ✅ Streaming response');
-    return result.toUIMessageStreamResponse();
   } catch (error) {
     console.error('[ERROR] POST /api/chat:', error);
     const errorMsg = error instanceof Error ? error.message : 'Unknown error';
