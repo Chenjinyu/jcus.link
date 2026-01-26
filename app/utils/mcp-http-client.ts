@@ -87,7 +87,7 @@ export async function getAllWorkExperience(content: string): Promise<string> {
 export async function searchSimilarContent(
   inputData: string,
   topK: number = 10,
-  threshold: number = 0.5
+  threshold: number = 0.3
 ): Promise<string> {
   return callMCPTool('search_similar_content', {
     input_text: inputData,
@@ -104,7 +104,7 @@ export async function getMatchedResumes(
   inputType: string,
   fileName: string,
   topK: number = 10,
-  threshold: number = 0.5
+  threshold: number = 0.3
 ): Promise<string> {
   return callMCPTool('generate_matched_resume', {
     input_type: inputType,
